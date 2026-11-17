@@ -1,14 +1,11 @@
 import os
 import json
 import requests
-import uvicorn
 from bs4 import BeautifulSoup
-from starlette.applications import Starlette
-from starlette.responses import PlainTextResponse, JSONResponse
-from starlette.routing import Route, Mount
 from mcp.server.fastmcp import FastMCP
 
-mcp = FastMCP("CricketPhotoFinder")
+port = int(os.environ.get("PORT", 10000))
+mcp = FastMCP("CricketPhotoFinder", host="0.0.0.0", port=port)
 
 def fetch_web_images(player_name: str, limit: int = 3) -> list:
     query = f"{player_name} cricketer match photo"
@@ -42,24 +39,5 @@ def get_player_photo(player_name: str) -> str:
         return f"No photos found for {player_name}"
     return "\n".join(photos)
 
-async def home(request):
-    return PlainTextResponse("Server is 100% LIVE!")
-
-async def oauth_check(request):
-    return JSONResponse({"status": "no_auth_required"}, status_code=200)
-
-mcp_app = mcp.streamable_http_app()
-
-app = Starlette(
-    routes=[
-        Route("/", home),
-        Route("/.well-known/oauth-protected-resource", oauth_check),
-        Route("/.well-known/oauth-authorization-server", oauth_check),
-        Mount("/", app=mcp_app),
-    ],
-    lifespan=lambda app: mcp.session_manager.run(),
-)
-
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8000))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    mcp.run(transport="streamable-http")
