@@ -4,7 +4,7 @@ import requests
 import uvicorn
 from bs4 import BeautifulSoup
 from starlette.applications import Starlette
-from starlette.responses import PlainTextResponse
+from starlette.responses import PlainTextResponse, JSONResponse
 from starlette.routing import Route, Mount
 from mcp.server.fastmcp import FastMCP
 
@@ -43,19 +43,18 @@ def get_player_photo(player_name: str) -> str:
     return "\n".join(photos)
 
 async def home(request):
-    return PlainTextResponse("Server is 100% LIVE! Test any player by adding /test?player=Rohit+Sharma at the end of this link.")
+    return PlainTextResponse("Server is 100% LIVE!")
 
-async def test_search(request):
-    player = request.query_params.get("player", "Jasprit Bumrah")
-    photos = fetch_web_images(player, limit=3)
-    return PlainTextResponse(f"Photos found for {player}:\n\n" + "\n".join(photos))
+async def oauth_check(request):
+    return JSONResponse({"status": "no_auth_required"}, status_code=200)
 
 mcp_app = mcp.streamable_http_app()
 
 app = Starlette(
     routes=[
         Route("/", home),
-        Route("/test", test_search),
+        Route("/.well-known/oauth-protected-resource", oauth_check),
+        Route("/.well-known/oauth-authorization-server", oauth_check),
         Mount("/", app=mcp_app),
     ],
     lifespan=lambda app: mcp.session_manager.run(),
