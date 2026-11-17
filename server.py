@@ -1,15 +1,11 @@
 import os
-import re
 import json
 import requests
-import uvicorn
 from bs4 import BeautifulSoup
-from starlette.applications import Starlette
-from starlette.responses import PlainTextResponse
-from starlette.routing import Route, Mount
 from mcp.server.fastmcp import FastMCP
 
-mcp = FastMCP("CricketPhotoFinder")
+port = int(os.environ.get("PORT", 8000))
+mcp = FastMCP("CricketPhotoFinder", host="0.0.0.0", port=port)
 
 def fetch_web_images(player_name: str, limit: int = 3) -> list:
     query = f"{player_name} cricketer match photo"
@@ -33,7 +29,7 @@ def fetch_web_images(player_name: str, limit: int = 3) -> list:
                     break
         return image_urls
     except Exception as e:
-        return [f"Error fetching image: {str(e)}"]
+        return [f"Error: {str(e)}"]
 
 @mcp.tool()
 def get_player_photo(player_name: str) -> str:
@@ -43,20 +39,5 @@ def get_player_photo(player_name: str) -> str:
         return f"No photos found for {player_name}"
     return "\n".join(photos)
 
-async def home(request):
-    return PlainTextResponse("Cricket Photo Finder (Web Image Search) is LIVE and Working!")
-
-async def test_search(request):
-    player = request.query_params.get("player", "Virat Kohli")
-    photos = fetch_web_images(player, limit=3)
-    return PlainTextResponse(f"Photos for {player}:\n" + "\n".join(photos))
-
-app = Starlette(routes=[
-    Route("/", home),
-    Route("/test", test_search),
-    Mount("/", app=mcp.streamable_http_app())
-])
-
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8000))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    mcp.run(transport="streamable-http")
