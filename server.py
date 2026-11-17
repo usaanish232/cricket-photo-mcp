@@ -1,14 +1,11 @@
 import os
 import json
 import requests
-import uvicorn
 from bs4 import BeautifulSoup
-from starlette.applications import Starlette
-from starlette.responses import JSONResponse
-from starlette.routing import Route, Mount
 from mcp.server.fastmcp import FastMCP
 
-mcp = FastMCP("CricketPhotoFinder")
+port = int(os.environ.get("PORT", 10000))
+mcp = FastMCP("CricketPhotoFinder", host="0.0.0.0", port=port)
 
 def fetch_web_images(player_name: str, limit: int = 3) -> list:
     query = f"{player_name} cricketer match photo"
@@ -42,16 +39,5 @@ def get_player_photo(player_name: str) -> str:
         return f"No photos found for {player_name}"
     return "\n".join(photos)
 
-async def health(request):
-    return JSONResponse({"status": "ok", "server": "CricketPhotoFinder"})
-
-app = Starlette(
-    routes=[
-        Route("/", health),
-        Mount("/mcp", app=mcp.sse_app()),
-    ]
-)
-
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    mcp.run(transport="streamable-http")
